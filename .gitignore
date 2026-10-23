@@ -1,0 +1,9 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Build output (installers are published as GitHub Release assets, not committed)
+build/
+dist/
+release/
