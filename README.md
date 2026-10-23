@@ -9,6 +9,15 @@ No admin rights or other software needed. If Windows shows "Windows protected yo
 click **More info → Run anyway** (the installer isn't code-signed).
 To update, run the newest setup over the old one.
 
+Or install (or update) from Command Prompt in one line. It installs silently, sets FileRing to start with Windows, and starts it:
+
+```cmd
+curl -L -o %TEMP%\FileRing-Setup.exe https://github.com/ME-JamesCarr/FileConverterRing/releases/latest/download/FileRing-Setup.exe && %TEMP%\FileRing-Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS="autostart" && start "" "%LOCALAPPDATA%\Programs\FileRing\FileRing.exe"
+```
+
+Installer options: `/SILENT` shows only a progress bar; `/TASKS="autostart,desktopicon"` also adds a desktop shortcut, `/TASKS=""` neither.
+Uninstall silently with `"%LOCALAPPDATA%\Programs\FileRing\unins000.exe" /VERYSILENT`.
+
 ## Use
 
 1. Start dragging a file in Explorer.
