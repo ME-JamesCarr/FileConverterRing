@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 import explorer
 import formats
-from formats import CATEGORY_COLOURS
+from formats import CATEGORY_COLOURS, button_label, target_name
 from hotkey import GlobalHotkey
 from progress import ProgressBadge
 from ring import RingOverlay
@@ -128,20 +128,20 @@ class FileRingApp:
     def start_conversion(self, files: list[Path], target: str, category: str):
         self.idle.start()
         job_id = self.service.convert(files, target, category)
-        badge = ProgressBadge(target.upper(), CATEGORY_COLOURS[category])
+        badge = ProgressBadge(button_label(target).replace("\n", " "), CATEGORY_COLOURS[category])
         badge.cancelRequested.connect(lambda: self.service.cancel(job_id))
         # Show the badge where the file was dropped, beside any still running.
         offset = sum(b.isVisible() for _, b in self.jobs.values()) * 86
         where = QCursor.pos() + QPoint(offset, 0)
         QTimer.singleShot(BADGE_DELAY_MS, lambda: job_id in self.jobs and badge.show_at(where))
         self.jobs[job_id] = (target, badge)
-        self.tray.setToolTip(f"FileRing: converting to {target.upper()}…")
+        self.tray.setToolTip(f"FileRing: converting to {target_name(target)}…")
 
     def on_progress(self, job_id: int, value: float):
         if job_id in self.jobs:
             target, badge = self.jobs[job_id]
             badge.set_value(value)
-            self.tray.setToolTip(f"FileRing: converting to {target.upper()}… "
+            self.tray.setToolTip(f"FileRing: converting to {target_name(target)}… "
                                  f"{round(value * 100)}%")
 
     def on_finished(self, job_id: int, outputs: list[Path], errors: list[str],

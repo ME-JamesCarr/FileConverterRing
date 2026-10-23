@@ -14,7 +14,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 import converters
-from formats import CATEGORIES, CATEGORY_COLOURS, TARGETS, ext_of
+from formats import CATEGORIES, CATEGORY_COLOURS, TARGETS, button_label, ext_of
 
 R1, B1 = 88, 34     # ring 1: radius, button radius
 R2, B2 = 178, 27    # ring 2: radius, button radius
@@ -262,7 +262,8 @@ class RingOverlay(QWidget):
             origin = self._category_buttons()[CATEGORIES.index(self._category)].centre
             for b in self._format_buttons():
                 b.centre = origin + (b.centre - origin) * t2
-                self._paint_button(p, b, b.key.upper(), 8 if len(b.key) > 4 else 9, t2)
+                label = button_label(b.key)
+                self._paint_button(p, b, label, 8 if len(label) > 4 else 9, t2)
         p.end()
 
     def _paint_hub(self, p: QPainter):
@@ -270,7 +271,7 @@ class RingOverlay(QWidget):
         p.setBrush(QColor(255, 255, 255, 18))
         p.drawEllipse(self._centre, HUB, HUB)
         if self._hover and self._hover.kind == "format" and self._hover.enabled:
-            text = f"→ {self._hover.key.upper()}"
+            text = f"→ {button_label(self._hover.key)}"
         elif len(self._files) == 1:
             text = ext_of(self._files[0]).upper() or "FILE"
         elif self._files:

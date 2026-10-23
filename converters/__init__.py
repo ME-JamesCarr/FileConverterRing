@@ -11,7 +11,7 @@ Add a new module to _MODULES to register it.
 """
 from pathlib import Path
 
-from formats import CATEGORIES, TARGETS, ext_of, output_path
+from formats import CATEGORIES, TARGETS, ext_of, output_path, target_name
 
 
 class Cancelled(Exception):
@@ -19,9 +19,9 @@ class Cancelled(Exception):
     below, because they import it from here."""
 
 
-from . import data, document, image, media, pdf_pages  # noqa: E402
+from . import background, data, document, image, media, pdf_pages  # noqa: E402
 
-_MODULES = [image, pdf_pages, document, data, media]
+_MODULES = [image, background, pdf_pages, document, data, media]
 
 
 def _find(src_ext: str, target_ext: str, category: str):
@@ -53,7 +53,7 @@ def convert(src: Path, target_ext: str, category: str, progress=None,
             cancel=None) -> list[Path]:
     mod = _find(ext_of(src), target_ext, category)
     if mod is None:
-        raise ValueError(f"Can't convert {src.name} to {target_ext.upper()}")
+        raise ValueError(f"Can't convert {src.name} to {target_name(target_ext)}")
     dst = output_path(src, target_ext)
     try:
         if getattr(mod, "REPORTS_PROGRESS", False):

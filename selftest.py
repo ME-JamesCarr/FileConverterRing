@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QApplication
 CASES = [
     ("photo.png", ["jpg", "webp", "ico", "pdf"], "Image"),
     ("logo.svg", ["png"], "Image"),
+    ("subject.jpg", ["png-transparent"], "Image"),   # downloads the model on first run
     ("notes.md", ["docx", "html", "pdf"], "Document"),
     ("notes.docx", ["pdf", "txt", "odt"], "Document"),
     ("notes.pdf", ["txt", "md", "docx"], "Document"),
@@ -37,6 +38,12 @@ def _make_samples(src: Path):
     im = Image.new("RGBA", (200, 120), (0, 0, 0, 0))
     ImageDraw.Draw(im).ellipse((10, 10, 190, 110), fill=(79, 140, 255, 220))
     im.save(src / "photo.png")
+    # A simple figure on a plain light background, for background removal.
+    bg = Image.new("RGB", (480, 360), (236, 238, 242))
+    d = ImageDraw.Draw(bg)
+    d.ellipse((200, 60, 280, 140), fill=(196, 140, 110))               # head
+    d.rounded_rectangle((170, 140, 310, 330), 40, fill=(40, 70, 140))  # body
+    bg.save(src / "subject.jpg", quality=92)
     (src / "logo.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="40" '
                                   'height="40"><circle cx="20" cy="20" r="18" fill="#e0559a"/></svg>')
     (src / "notes.md").write_text("# Notes\n\nSome **bold** text.\n\n- one\n- two\n\n"
@@ -53,6 +60,15 @@ def _make_samples(src: Path):
                          "-f", "lavfi", "-i", "sine=duration=2", "-c:v", "libx264",
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
                          str(src / "clip.mp4")], check=True, creationflags=flags)
+
+
+def _check_cutout(path: Path) -> tuple[bool, str]:
+    """The background corner should be see-through and the figure solid."""
+    from PIL import Image
+    with Image.open(path) as im:
+        alpha = im.getchannel("A")
+        corner, body = alpha.getpixel((10, 10)), alpha.getpixel((240, 240))
+    return corner < 40 and body > 200, f"corner alpha {corner}, subject alpha {body}"
 
 
 def run(folder: Path) -> int:
@@ -82,6 +98,9 @@ def run(folder: Path) -> int:
                         outs = converters.convert(src / name, t, category)
                         sizes = ", ".join(f"{o.name} ({o.stat().st_size} B)" for o in outs)
                         ok = all(o.stat().st_size > 0 for o in outs)
+                        if t == "png-transparent":
+                            ok, detail = _check_cutout(outs[0])
+                            sizes += f" [{detail}]"
                         lines.append(f"{'ok  ' if ok else 'FAIL'} {name} -> {t}: {sizes}")
                         failures[0] += not ok
                     except Exception as exc:

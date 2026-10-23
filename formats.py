@@ -21,13 +21,32 @@ CATEGORIES = ["Image", "Document", "Data", "Media", "Other"]
 
 # Formats offered in Ring 2 for each category (in display order).
 TARGETS = {
-    "Image": ["png", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf"],
+    "Image": ["png", "png-transparent", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf"],
     "Document": ["txt", "md", "html", "docx", "odt", "rtf", "epub", "pdf"],
     "Data": ["csv", "tsv", "json", "xlsx", "yaml", "xml", "toml"],
     "Media": ["mp3", "wav", "flac", "ogg", "m4a", "aac",
               "mp4", "mkv", "mov", "avi", "webm", "gif"],
     "Other": ["zip", "7z", "tar.gz", "ttf", "otf", "woff2"],
 }
+
+# Targets that aren't simply a file extension: key -> (extension, suffix added
+# to the file name, label on the ring button, longer name for messages).
+SPECIAL_TARGETS = {
+    "png-transparent": ("png", " (transparent)", "PNG\nNO BG", "PNG, background removed"),
+}
+
+
+def target_ext(target: str) -> str:
+    return SPECIAL_TARGETS[target][0] if target in SPECIAL_TARGETS else target
+
+
+def button_label(target: str) -> str:
+    return SPECIAL_TARGETS[target][2] if target in SPECIAL_TARGETS else target.upper()
+
+
+def target_name(target: str) -> str:
+    return SPECIAL_TARGETS[target][3] if target in SPECIAL_TARGETS else target.upper()
+
 
 CATEGORY_COLOURS = {
     "Image": "#4f8cff",
@@ -64,10 +83,11 @@ def stem_of(path: Path) -> str:
     return path.stem
 
 
-def output_path(src: Path, target_ext: str) -> Path:
-    """Where src converted to target_ext goes, never overwriting an existing file."""
+def output_path(src: Path, target: str) -> Path:
+    """Where src converted to target goes, never overwriting an existing file."""
     folder = src.parent if SAVE_NEXT_TO_ORIGINAL else OUTPUT_DIR
-    return unique_path(folder, stem_of(src), target_ext)
+    suffix = SPECIAL_TARGETS[target][1] if target in SPECIAL_TARGETS else ""
+    return unique_path(folder, stem_of(src) + suffix, target_ext(target))
 
 
 def unique_path(folder: Path, stem: str, target_ext: str) -> Path:
