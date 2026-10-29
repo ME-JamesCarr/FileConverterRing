@@ -14,7 +14,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 import converters
-from formats import CATEGORIES, CATEGORY_COLOURS, TARGETS, button_label, ext_of
+from formats import CATEGORIES, CATEGORY_COLOURS, TARGETS, button_label, kind_of
 
 R1, B1 = 88, 34     # ring 1: radius, button radius
 R2, B2 = 178, 27    # ring 2: radius, button radius
@@ -174,14 +174,14 @@ class RingOverlay(QWidget):
 
     def dragEnterEvent(self, e):
         paths = [Path(u.toLocalFile()) for u in e.mimeData().urls() if u.isLocalFile()]
-        paths = [p for p in paths if p.is_file()]
+        paths = [p for p in paths if p.exists()]   # files and folders
         if not paths:
             e.ignore()
             return
         self._leave.stop()
         self._idle.stop()
         self._files = paths
-        self._src_exts = {ext_of(p) for p in paths}
+        self._src_exts = {kind_of(p) for p in paths}
         enabled = self._enabled_categories()
         if self._category not in enabled:
             self._category = None
@@ -273,9 +273,10 @@ class RingOverlay(QWidget):
         if self._hover and self._hover.kind == "format" and self._hover.enabled:
             text = f"→ {button_label(self._hover.key)}"
         elif len(self._files) == 1:
-            text = ext_of(self._files[0]).upper() or "FILE"
+            text = kind_of(self._files[0]).upper() or "FILE"
         elif self._files:
-            text = f"{len(self._files)} files"
+            noun = "items" if any(f.is_dir() for f in self._files) else "files"
+            text = f"{len(self._files)} {noun}"
         else:
             text = "Drag a\nfile here"
         p.setPen(QColor(235, 238, 245))

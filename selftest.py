@@ -71,6 +71,23 @@ def _check_cutout(path: Path) -> tuple[bool, str]:
     return corner < 40 and body > 200, f"corner alpha {corner}, subject alpha {body}"
 
 
+def _check_zip(src: Path, converters) -> tuple[bool, str]:
+    """Several files and a folder dropped on ZIP make one archive holding all of them."""
+    import zipfile
+    folder = src / "Reports"
+    (folder / "2026" / "empty").mkdir(parents=True, exist_ok=True)
+    (folder / "2026" / "q1.txt").write_text("quarter one\n" * 200)
+    outs, errors = converters.run_job([src / "photo.png", src / "notes.md", folder],
+                                      "zip", "Other")
+    if errors or len(outs) != 1:
+        return False, f"outputs {outs}, errors {errors}"
+    with zipfile.ZipFile(outs[0]) as zf:
+        names = sorted(zf.namelist())
+        intact = zf.testzip() is None
+    expected = ["Reports/2026/empty/", "Reports/2026/q1.txt", "notes.md", "photo.png"]
+    return intact and names == expected, f"{outs[0].name}: {names}"
+
+
 def run(folder: Path) -> int:
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication.instance() or QApplication([])
@@ -106,6 +123,9 @@ def run(folder: Path) -> int:
                     except Exception as exc:
                         lines.append(f"FAIL {name} -> {t}: {type(exc).__name__}: {exc}")
                         failures[0] += 1
+            ok, detail = _check_zip(src, converters)
+            lines.append(f"{'ok  ' if ok else 'FAIL'} 2 files + folder -> zip: {detail}")
+            failures[0] += not ok
         except Exception:
             lines.append("FAIL setup:\n" + traceback.format_exc())
             failures[0] += 1

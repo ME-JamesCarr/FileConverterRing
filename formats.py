@@ -83,11 +83,34 @@ def stem_of(path: Path) -> str:
     return path.stem
 
 
+FOLDER = "folder"   # what kind_of() calls a dragged folder
+
+
+def kind_of(path: Path) -> str:
+    """The file's canonical extension, or FOLDER for a folder."""
+    return FOLDER if path.is_dir() else ext_of(path)
+
+
 def output_path(src: Path, target: str) -> Path:
     """Where src converted to target goes, never overwriting an existing file."""
     folder = src.parent if SAVE_NEXT_TO_ORIGINAL else OUTPUT_DIR
     suffix = SPECIAL_TARGETS[target][1] if target in SPECIAL_TARGETS else ""
     return unique_path(folder, stem_of(src) + suffix, target_ext(target))
+
+
+def combined_output_path(srcs: list[Path], target: str) -> Path:
+    """Where several files/folders combined into one file (e.g. a ZIP) go.
+
+    One item keeps its own name (Photos -> Photos.zip); several are named
+    after the folder they came from (5 files from Invoices -> Invoices.zip).
+    """
+    first = srcs[0]
+    if len(srcs) == 1:
+        stem = first.name if first.is_dir() else stem_of(first)
+    else:
+        stem = first.parent.name or "Archive"   # a drive root has no name
+    folder = first.parent if SAVE_NEXT_TO_ORIGINAL else OUTPUT_DIR
+    return unique_path(folder, stem, target_ext(target))
 
 
 def unique_path(folder: Path, stem: str, target_ext: str) -> Path:

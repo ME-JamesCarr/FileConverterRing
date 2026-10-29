@@ -84,6 +84,7 @@ The "Other" category (archives, fonts) has no converters yet.
 
 ## Good to know
 
+- **ZIP** (Other ring) takes any files and folders. Drop several at once and they go into **one** ZIP, named after the folder they came from (`Invoices.zip`); a single folder keeps its name. Folders keep their structure. Already-compressed files (photos, video, Office files, ZIPs) are stored as-is, which is much faster. 7Z, TAR.GZ and the font formats aren't implemented yet.
 - **PNG / NO BG** (Image ring) removes the background and saves `name (transparent).png`. It uses the IS-Net model (Apache-2.0) via ONNX Runtime. The model (170 MB) downloads once on first use to `%LOCALAPPDATA%\FileRing\models` and is checked against a fixed SHA-256; after that it works offline, a few seconds per image. Works best when the subject stands out from the background (people, products, objects).
 - PDF output is rendered by Qt's built-in Chromium engine. Normal documents (headings, lists, tables, images) come out well; complex Word layouts (text boxes, columns) are simplified.
 - PDF to DOCX keeps the page layout (pdf2docx). PDF to other document formats goes via Markdown, which keeps structure but not exact layout. Scanned PDFs have no text to extract (OCR isn't included).

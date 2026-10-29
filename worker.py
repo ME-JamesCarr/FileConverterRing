@@ -70,20 +70,9 @@ def run_worker(server_name: str) -> int:
     outbox.send.connect(send)
 
     def work(job: dict, cancel: threading.Event):
-        files = [Path(f) for f in job["files"]]
-        outputs, errors = [], []
-        n = len(files)
-        for i, f in enumerate(files):
-            if cancel.is_set():
-                break
-            report = lambda frac, i=i: outbox.send.emit(
-                {"id": job["id"], "progress": (i + frac) / n})
-            try:
-                outputs += converters.convert(f, job["target"], job["category"], report, cancel)
-            except converters.Cancelled:
-                break
-            except Exception as exc:
-                errors.append(f"{f.name}: {exc}")
+        outputs, errors = converters.run_job(
+            [Path(f) for f in job["files"]], job["target"], job["category"],
+            lambda v: outbox.send.emit({"id": job["id"], "progress": v}), cancel)
         outbox.send.emit({"id": job["id"], "done": True, "outputs": [str(o) for o in outputs],
                           "errors": errors, "cancelled": cancel.is_set()})
 
