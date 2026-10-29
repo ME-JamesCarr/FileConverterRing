@@ -25,6 +25,12 @@ Uninstall silently with `"%LOCALAPPDATA%\Programs\FileRing\unins000.exe" /VERYSI
 3. Hold the file over a category for a moment to open its formats. (If only one category fits, it opens by itself.)
 4. Drop on a format. The converted copy is saved to `Pictures\Converted` (your OneDrive Pictures folder if OneDrive is set up) and File Explorer opens with it selected. The original is never changed. If a conversion fails, a small dialog says why.
 
+Or right-click files in Explorer and choose **Convert with FileRing** (on Windows 11 it's
+under **Show more options** / Shift+F10). The submenu lists only the formats the file you
+right-clicked can become. With several files selected they're converted as one batch, and any
+that can't become the chosen format are skipped and listed; ZIP takes any mix of files and
+folders. Turn the menu off in Settings.
+
 You can also press the hotkey first and then drag a file onto the ring.
 Close the ring with **Esc**, a right-click, a click on the centre, or the hotkey again.
 Categories and formats the file can't be converted to are greyed out.
@@ -84,6 +90,10 @@ The "Other" category (archives, fonts) has no converters yet.
 
 ## Good to know
 
+- **PDF (merged)** (Document ring) combines PDFs, images and documents dropped together into one PDF, in natural file-name order (`page 2` before `page 10`). Images go on A4 pages; documents are converted first. Named after their folder: `Invoices (merged).pdf`.
+- **Compress to size** (the `≤ 10 MB` button in the Image, Document and Media rings; set the size in Settings) makes photos (best JPG/WEBP quality that fits, scaled down only if needed), PDFs (embedded images downsampled), video (two-pass MP4 at the bitrate that fits) and audio (MP3) smaller than the limit. Saved as `name (compressed).ext`. Files already under the limit are left alone.
+- **Automatic updates:** the installed FileRing checks GitHub releases at startup and every 6 hours, downloads the new installer (checked against GitHub's SHA-256), and installs it silently once FileRing has been idle for 3 minutes, then restarts. Tray menu: **Check for updates**. Turn off in Settings. `FileRing.exe --update` updates straight away. Copies that weren't installed by the installer never update themselves.
+- Startup decisions are logged to `%LOCALAPPDATA%\FileRing\FileRing.log`; errors to `error.log` in the same folder.
 - **ZIP** (Other ring) takes any files and folders. Drop several at once and they go into **one** ZIP, named after the folder they came from (`Invoices.zip`); a single folder keeps its name. Folders keep their structure. Already-compressed files (photos, video, Office files, ZIPs) are stored as-is, which is much faster. 7Z, TAR.GZ and the font formats aren't implemented yet.
 - **PNG / NO BG** (Image ring) removes the background and saves `name (transparent).png`. It uses the IS-Net model (Apache-2.0) via ONNX Runtime. The model (170 MB) downloads once on first use to `%LOCALAPPDATA%\FileRing\models` and is checked against a fixed SHA-256; after that it works offline, a few seconds per image. Works best when the subject stands out from the background (people, products, objects).
 - PDF output is rendered by Qt's built-in Chromium engine. Normal documents (headings, lists, tables, images) come out well; complex Word layouts (text boxes, columns) are simplified.

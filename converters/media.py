@@ -65,8 +65,12 @@ def convert(src: Path, dst: Path, progress=None, cancel=None) -> None:
     duration, has_audio = _probe(src)
     if target in AUDIO and not has_audio:
         raise ValueError(f"{src.name} has no audio track")
-    cmd = [FFMPEG, "-hide_banner", "-nostdin", "-i", str(src), *ARGS[target],
-           "-progress", "pipe:1", "-nostats", str(dst)]
+    run_ffmpeg(["-i", str(src), *ARGS[target], str(dst)], duration, progress, cancel)
+
+
+def run_ffmpeg(args: list[str], duration: float | None, progress=None, cancel=None) -> None:
+    """Run FFmpeg with these arguments, reporting progress and stopping if cancelled."""
+    cmd = [FFMPEG, "-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats", *args]
     with tempfile.TemporaryFile() as err:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=err, text=True,
                                 creationflags=_NO_WINDOW)

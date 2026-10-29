@@ -5,7 +5,7 @@ The tray app (ConversionService) starts the worker on demand and talks to it
 over a local socket, one JSON message per line:
 
   app -> worker   {"type": "convert", "id", "files", "target", "category",
-                   "output_dir", "next_to_original"}
+                   "output_dir", "next_to_original", "compress_mb"}
                   {"type": "cancel", "id"}
   worker -> app   {"id", "ack": true}
                   {"id", "progress": 0..1}
@@ -82,6 +82,7 @@ def run_worker(server_name: str) -> int:
             # Every job carries the current settings, so changes apply straight away.
             formats.OUTPUT_DIR = Path(msg["output_dir"])
             formats.SAVE_NEXT_TO_ORIGINAL = msg["next_to_original"]
+            formats.COMPRESS_MB = msg.get("compress_mb", formats.COMPRESS_MB)
             cancel = threading.Event()
             jobs[msg["id"]] = cancel
             _write(sock, {"id": msg["id"], "ack": True})
@@ -138,7 +139,8 @@ class ConversionService(QObject):
         msg = {"type": "convert", "id": job_id, "files": [str(f) for f in files],
                "target": target, "category": category,
                "output_dir": str(formats.OUTPUT_DIR),
-               "next_to_original": formats.SAVE_NEXT_TO_ORIGINAL}
+               "next_to_original": formats.SAVE_NEXT_TO_ORIGINAL,
+               "compress_mb": formats.COMPRESS_MB}
         self._in_flight[job_id] = msg
         self._send(msg)
         return job_id

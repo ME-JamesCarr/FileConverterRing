@@ -11,7 +11,10 @@ cancel threading.Event (raising Cancelled when it is set).
 A module with COMBINES = True turns all the dropped items into one output
 (e.g. a ZIP) instead: it has convert_many(srcs, dst, progress, cancel).
 SOURCES = ANY accepts any file type, and folders.
-Add a new module to _MODULES to register it.
+output_ext(src_ext) picks the output extension when the target has none of
+its own (e.g. "compress" keeps the source's format).
+Entries in _MODULES are usually modules; any object with these attributes
+works (compress.py registers one per ring). Add one to _MODULES to register it.
 """
 from pathlib import Path
 
@@ -26,9 +29,11 @@ class Cancelled(Exception):
     below, because they import it from here."""
 
 
-from . import archive, background, data, document, image, media, pdf_pages  # noqa: E402
+from . import (archive, background, compress, data, document, image, media,  # noqa: E402
+               pdf_merge, pdf_pages)
 
-_MODULES = [image, background, pdf_pages, document, data, media, archive]
+_MODULES = [image, background, pdf_pages, document, pdf_merge, data, media, archive,
+            compress.IMAGE, compress.PDF, compress.MEDIA]
 
 
 def _find(src_ext: str, target_ext: str, category: str):
@@ -63,7 +68,8 @@ def convert(src: Path, target_ext: str, category: str, progress=None,
     mod = _find(kind_of(src), target_ext, category)
     if mod is None:
         raise ValueError(f"Can't convert {src.name} to {target_name(target_ext)}")
-    dst = output_path(src, target_ext)
+    ext = mod.output_ext(kind_of(src)) if hasattr(mod, "output_ext") else None
+    dst = output_path(src, target_ext, ext)
     try:
         if getattr(mod, "REPORTS_PROGRESS", False):
             written = mod.convert(src, dst, progress, cancel)

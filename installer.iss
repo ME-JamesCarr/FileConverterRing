@@ -56,6 +56,9 @@ Filename: "{app}\{#AppExe}"; Description: "Start FileRing now"; \
     Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
+; Remove the "Convert with FileRing" right-click menu (FileRing writes it itself).
+Filename: "{app}\{#AppExe}"; Parameters: "--unregister-shell"; Flags: runhidden; \
+    RunOnceId: "RemoveShellMenu"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM {#AppExe}"; Flags: runhidden; \
     RunOnceId: "StopFileRing"
 

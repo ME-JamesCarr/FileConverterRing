@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings
 from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QDialog, QDialogButtonBox,
+from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QRadioButton, QVBoxLayout,
                                QKeySequenceEdit)
@@ -24,6 +24,9 @@ class Settings:
     hotkey: str = DEFAULT_HOTKEY
     output_dir: str = str(formats.DEFAULT_OUTPUT_DIR)
     next_to_original: bool = False
+    explorer_menu: bool = True
+    compress_mb: float = 10.0
+    auto_update: bool = True
 
     @classmethod
     def load(cls) -> "Settings":
@@ -32,6 +35,9 @@ class Settings:
         s.hotkey = q.value("hotkey", s.hotkey, str)
         s.output_dir = q.value("output_dir", s.output_dir, str)
         s.next_to_original = q.value("next_to_original", s.next_to_original, bool)
+        s.explorer_menu = q.value("explorer_menu", s.explorer_menu, bool)
+        s.compress_mb = q.value("compress_mb", s.compress_mb, float)
+        s.auto_update = q.value("auto_update", s.auto_update, bool)
         if parse_hotkey(s.hotkey) is None:
             s.hotkey = DEFAULT_HOTKEY
         return s
@@ -41,10 +47,14 @@ class Settings:
         q.setValue("hotkey", self.hotkey)
         q.setValue("output_dir", self.output_dir)
         q.setValue("next_to_original", self.next_to_original)
+        q.setValue("explorer_menu", self.explorer_menu)
+        q.setValue("compress_mb", self.compress_mb)
+        q.setValue("auto_update", self.auto_update)
 
     def apply(self):
         formats.OUTPUT_DIR = Path(self.output_dir)
         formats.SAVE_NEXT_TO_ORIGINAL = self.next_to_original
+        formats.COMPRESS_MB = self.compress_mb
 
 
 # ---- start with Windows --------------------------------------------------------
@@ -132,6 +142,20 @@ class SettingsDialog(QDialog):
         # Start with Windows
         self.autostart = QCheckBox("Start FileRing when Windows starts")
         self.autostart.setChecked(autostart_enabled())
+        self.explorer_menu = QCheckBox("Show \"Convert with FileRing\" when right-clicking files")
+        self.explorer_menu.setChecked(settings.explorer_menu)
+        self.auto_update = QCheckBox("Update FileRing automatically")
+        self.auto_update.setChecked(settings.auto_update)
+
+        # Compress to size
+        self.compress = QDoubleSpinBox(decimals=1, minimum=0.1, maximum=4000, singleStep=1,
+                                       suffix=" MB", value=settings.compress_mb)
+        compress_box = QGroupBox("Compress to size")
+        cl = QFormLayout(compress_box)
+        cl.addRow("Make files smaller than:", self.compress)
+        hint = QLabel("For example 10 MB for email, 25 MB for Teams, 1 MB for web uploads.")
+        hint.setWordWrap(True)
+        cl.addRow(hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
@@ -141,7 +165,10 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(key_box)
         layout.addWidget(out_box)
+        layout.addWidget(compress_box)
         layout.addWidget(self.autostart)
+        layout.addWidget(self.explorer_menu)
+        layout.addWidget(self.auto_update)
         layout.addStretch()
         layout.addWidget(buttons)
         self._check_hotkey()
@@ -168,6 +195,9 @@ class SettingsDialog(QDialog):
         s.hotkey = self._hotkey_text()
         s.output_dir = self.folder_edit.text().strip() or str(formats.DEFAULT_OUTPUT_DIR)
         s.next_to_original = self.to_original.isChecked()
+        s.explorer_menu = self.explorer_menu.isChecked()
+        s.auto_update = self.auto_update.isChecked()
+        s.compress_mb = round(self.compress.value(), 1)
         s.save()
         s.apply()
         if self.autostart.isChecked() != autostart_enabled():

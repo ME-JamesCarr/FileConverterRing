@@ -21,18 +21,28 @@ CATEGORIES = ["Image", "Document", "Data", "Media", "Other"]
 
 # Formats offered in Ring 2 for each category (in display order).
 TARGETS = {
-    "Image": ["png", "png-transparent", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf"],
-    "Document": ["txt", "md", "html", "docx", "odt", "rtf", "epub", "pdf"],
+    "Image": ["png", "png-transparent", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf",
+              "compress"],
+    "Document": ["txt", "md", "html", "docx", "odt", "rtf", "epub", "pdf", "pdf-merged",
+                 "compress"],
     "Data": ["csv", "tsv", "json", "xlsx", "yaml", "xml", "toml"],
     "Media": ["mp3", "wav", "flac", "ogg", "m4a", "aac",
-              "mp4", "mkv", "mov", "avi", "webm", "gif"],
+              "mp4", "mkv", "mov", "avi", "webm", "gif", "compress"],
     "Other": ["zip", "7z", "tar.gz", "ttf", "otf", "woff2"],
 }
 
+# Size limit for the "compress" target, in MB (1 MB = 1024 x 1024 bytes, as
+# Explorer shows sizes). Set from the user's settings.
+COMPRESS_MB = 10.0
+
 # Targets that aren't simply a file extension: key -> (extension, suffix added
 # to the file name, label on the ring button, longer name for messages).
+# "compress" keeps (roughly) the source's own format; its converter picks the
+# extension, and its labels show the size limit.
 SPECIAL_TARGETS = {
-    "png-transparent": ("png", " (transparent)", "PNG\nNO BG", "PNG, background removed"),
+    "png-transparent": ("png", " (transparent)", "PNG\nNO BG", "PNG (no background)"),
+    "pdf-merged": ("pdf", " (merged)", "PDF\nMERGE", "PDF (merged)"),
+    "compress": (None, " (compressed)", None, None),
 }
 
 
@@ -40,11 +50,19 @@ def target_ext(target: str) -> str:
     return SPECIAL_TARGETS[target][0] if target in SPECIAL_TARGETS else target
 
 
+def target_suffix(target: str) -> str:
+    return SPECIAL_TARGETS[target][1] if target in SPECIAL_TARGETS else ""
+
+
 def button_label(target: str) -> str:
+    if target == "compress":
+        return f"≤ {COMPRESS_MB:g}\nMB"
     return SPECIAL_TARGETS[target][2] if target in SPECIAL_TARGETS else target.upper()
 
 
 def target_name(target: str) -> str:
+    if target == "compress":
+        return f"Compress to {COMPRESS_MB:g} MB"
     return SPECIAL_TARGETS[target][3] if target in SPECIAL_TARGETS else target.upper()
 
 
@@ -91,11 +109,11 @@ def kind_of(path: Path) -> str:
     return FOLDER if path.is_dir() else ext_of(path)
 
 
-def output_path(src: Path, target: str) -> Path:
-    """Where src converted to target goes, never overwriting an existing file."""
+def output_path(src: Path, target: str, ext: str | None = None) -> Path:
+    """Where src converted to target goes, never overwriting an existing file.
+    ext overrides the target's extension (for targets that don't have one)."""
     folder = src.parent if SAVE_NEXT_TO_ORIGINAL else OUTPUT_DIR
-    suffix = SPECIAL_TARGETS[target][1] if target in SPECIAL_TARGETS else ""
-    return unique_path(folder, stem_of(src) + suffix, target_ext(target))
+    return unique_path(folder, stem_of(src) + target_suffix(target), ext or target_ext(target))
 
 
 def combined_output_path(srcs: list[Path], target: str) -> Path:
@@ -110,7 +128,7 @@ def combined_output_path(srcs: list[Path], target: str) -> Path:
     else:
         stem = first.parent.name or "Archive"   # a drive root has no name
     folder = first.parent if SAVE_NEXT_TO_ORIGINAL else OUTPUT_DIR
-    return unique_path(folder, stem, target_ext(target))
+    return unique_path(folder, stem + target_suffix(target), target_ext(target))
 
 
 def unique_path(folder: Path, stem: str, target_ext: str) -> Path:

@@ -88,6 +88,63 @@ def _check_zip(src: Path, converters) -> tuple[bool, str]:
     return intact and names == expected, f"{outs[0].name}: {names}"
 
 
+def _check_merge(src: Path, converters) -> tuple[bool, str]:
+    """A PDF, an image, a Word file and a photo merge into one PDF, one page each."""
+    import pymupdf
+    files = [src / "notes.pdf", src / "photo.png", src / "notes.docx", src / "subject.jpg"]
+    outs, errors = converters.run_job(files, "pdf-merged", "Document")
+    if errors or len(outs) != 1:
+        return False, f"outputs {outs}, errors {errors}"
+    with pymupdf.open(outs[0]) as doc:
+        pages = doc.page_count
+    return pages == 4, f"{outs[0].name}: {pages} pages"
+
+
+def _check_compress(src: Path, converters) -> list[tuple[str, tuple[bool, str]]]:
+    """Big photo, PDF, video and audio files each come out under the limit."""
+    import os
+    import subprocess
+    import formats
+    import pymupdf
+    from PIL import Image
+    from converters import media
+
+    noise = Image.frombytes("RGB", (2400, 1600), os.urandom(2400 * 1600 * 3))
+    noise.save(src / "big photo.jpg", quality=95)
+    pdf = pymupdf.open()
+    pdf.new_page().insert_image(pymupdf.Rect(36, 36, 559, 806), filename=src / "big photo.jpg")
+    pdf.save(src / "big scan.pdf")
+    ff = [media.FFMPEG, "-hide_banner", "-loglevel", "error", "-y"]
+    flags = subprocess.CREATE_NO_WINDOW
+    subprocess.run(ff + ["-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30:duration=20",
+                         "-f", "lavfi", "-i", "sine=duration=20", "-c:v", "libx264", "-crf", "8",
+                         "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
+                         str(src / "big video.mp4")], check=True, creationflags=flags)
+    subprocess.run(ff + ["-f", "lavfi", "-i", "sine=duration=90", "-c:a", "libmp3lame",
+                         "-b:a", "320k", str(src / "big song.mp3")], check=True, creationflags=flags)
+
+    results = []
+    for name, category, mb in [("big photo.jpg", "Image", 1), ("big scan.pdf", "Document", 1),
+                               ("big video.mp4", "Media", 2), ("big song.mp3", "Media", 1),
+                               ("tone.mp3", "Media", 1)]:
+        formats.COMPRESS_MB = mb
+        path = src / name
+        before = path.stat().st_size / 2**20
+        outs, errors = converters.run_job([path], "compress", category)
+        if name == "tone.mp3":   # already small: left alone, with a note
+            ok = not outs and errors and "already under" in errors[0]
+            results.append((f"{name} -> compress {mb} MB", (bool(ok), f"note: {errors}")))
+            continue
+        if errors or not outs:
+            results.append((f"{name} -> compress {mb} MB", (False, f"errors {errors}")))
+            continue
+        after = outs[0].stat().st_size / 2**20
+        results.append((f"{name} -> compress {mb} MB",
+                        (after <= mb, f"{before:.1f} MB -> {outs[0].name} {after:.2f} MB")))
+    formats.COMPRESS_MB = 10.0
+    return results
+
+
 def run(folder: Path) -> int:
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication.instance() or QApplication([])
@@ -126,6 +183,10 @@ def run(folder: Path) -> int:
             ok, detail = _check_zip(src, converters)
             lines.append(f"{'ok  ' if ok else 'FAIL'} 2 files + folder -> zip: {detail}")
             failures[0] += not ok
+            for label, (ok, detail) in [("merge 4 files -> pdf", _check_merge(src, converters)),
+                                        *_check_compress(src, converters)]:
+                lines.append(f"{'ok  ' if ok else 'FAIL'} {label}: {detail}")
+                failures[0] += not ok
         except Exception:
             lines.append("FAIL setup:\n" + traceback.format_exc())
             failures[0] += 1
